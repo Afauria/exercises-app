@@ -2,7 +2,7 @@ import type { PracticeRecord, ExamSession } from '../types/models';
 
 const PREFIX = 'exam_web:';
 
-export const STORAGE_KEYS = {
+const STORAGE_KEYS = {
   wrongIds: `${PREFIX}wrong_ids`,
   favoriteIds: `${PREFIX}favorite_ids`,
   practiceRecords: `${PREFIX}practice_records`,
@@ -102,8 +102,3 @@ export function clearIncludingCustomBank() {
   localStorage.removeItem(STORAGE_KEYS.customBankJson);
 }
 
-export function subscribeStorage(cb: () => void) {
-  const on = () => cb();
-  window.addEventListener('storage', on);
-  return () => window.removeEventListener('storage', on);
-}

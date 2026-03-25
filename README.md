@@ -9,9 +9,11 @@ npm install
 npm run dev
 ```
 
-浏览器访问终端提示的本地地址。默认 `base` 为 **`/ai_test/`**（与 GitHub Pages 项目站路径一致），开发时请打开 **`http://localhost:5173/ai_test/`**（注意末尾路径）。`dev` 会先执行一次题库 JSON 生成脚本。
+浏览器访问终端提示的本地地址。本地默认 `base` 为 **`/ai_test/`**（仅本地回退；与 Playwright 一致），开发时请打开 **`http://localhost:5173/ai_test/`**。
 
-若需根路径部署，构建前设置环境变量，例如：`VITE_BASE=/ npm run build`（根路径需配合托管方 SPA 回退）。
+**GitHub Actions** 构建时会带上环境变量 **`GITHUB_REPOSITORY`**，`vite.config` 会自动使用 **`/<仓库名>/`**，与 `https://<用户>.github.io/<仓库名>/` 一致，一般**不必改路径**。
+
+手动覆盖：`VITE_BASE=/你的路径/`（根站点用 `VITE_BASE=/`）。
 
 ## 构建与部署
 
@@ -21,10 +23,11 @@ npm run build
 
 产物在 `dist/`。将 **`dist/` 下全部内容**（含 `404.html`）上传到静态站点。
 
-**GitHub Pages（项目站 `https://<user>.github.io/<仓库名>/`）**  
-- 默认按仓库名 **`ai_test`** 配置，资源前缀为 `/ai_test/`。若仓库名不同，请改 `vite.config.ts` 中的默认 `base`，或构建时使用 `VITE_BASE=/你的仓库名/`。  
-- 路由采用 **Hash 模式**（地址形如 `.../ai_test/#/practice`）：刷新时只请求 `index.html`，不会出现「`/ai_test/practice` 刷新 404」的问题。  
-- 构建脚本仍会复制 **`404.html`**，可作备用（例如误打开非 hash 路径时）。
+**GitHub Pages（`gh-pages` 分支 = `dist` 根目录）**  
+- 项目站 URL：`https://<user>.github.io/<仓库名>/`。构建在 **GitHub Actions** 上执行时，**`base` 自动为 `/<仓库名>/`**（读 `GITHUB_REPOSITORY`）。本地构建若要模拟线上，可执行：  
+  `GITHUB_REPOSITORY=你的名/你的仓库名 npm run build`  
+- 路由为 **Hash**（如 `.../<仓库名>/#/practice`），刷新不会请求不存在的 `/practice` 路径。  
+- **`404.html`** 由构建脚本复制，可作备用。
 
 其它托管需配置「所有未匹配路径回退到 `index.html`」；根目录部署时用 `VITE_BASE=/` 构建。
 

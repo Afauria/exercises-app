@@ -1,7 +1,21 @@
 import { defineConfig, devices } from '@playwright/test';
 
-/** 与 vite.config 中 GitHub Pages base 一致（无前导 host） */
-export const E2E_BASE_PATH = '/ai_test';
+/** 与 vite.config 的 base 路径段一致（无末尾 /） */
+function e2eBasePath(): string {
+  const explicit = process.env.E2E_BASE?.trim();
+  if (explicit) {
+    const s = explicit.replace(/\/$/, '');
+    return s || '/ai_test';
+  }
+  const gh = process.env.GITHUB_REPOSITORY;
+  if (gh) {
+    const repo = gh.split('/')[1];
+    if (repo) return `/${repo}`;
+  }
+  return '/ai_test';
+}
+
+const E2E_BASE_PATH = e2eBasePath();
 
 export default defineConfig({
   testDir: './e2e',
