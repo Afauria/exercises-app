@@ -68,4 +68,17 @@ test.describe('题库应用功能验证', () => {
     await eye.click();
     await expect(page.getByPlaceholder('搜索题号或题干')).toBeVisible();
   });
+
+  test('清空全部数据后内置题库分节仍在', async ({ page }) => {
+    let dialogs = 0;
+    page.on('dialog', async (d) => {
+      dialogs += 1;
+      await d.accept();
+    });
+    await page.getByRole('button', { name: /清空或导入题库/ }).click();
+    await page.getByText('清空全部数据').click();
+    await expect.poll(() => dialogs, { timeout: 10_000 }).toBeGreaterThanOrEqual(2);
+    await expect(page.getByText('第 1 节').first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/共 \d+ 题/)).toBeVisible();
+  });
 });

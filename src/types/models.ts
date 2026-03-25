@@ -7,7 +7,6 @@ export interface QuestionOption {
 
 export interface Question {
   id: number;
-  bankId: string;
   ordinal: number;
   stem: string;
   qtype: QuestionType;
@@ -16,21 +15,20 @@ export interface Question {
   options: QuestionOption[] | null;
 }
 
-export interface ImportReport {
-  bankId: string;
+export interface BankDocument {
   bankName: string;
-  parsed: number;
-  failed: number;
-  errors: string[];
+  questions: Question[];
+  parseErrors?: string[];
 }
 
-export interface ExamConfig {
-  durationMinutes: number;
-  questionCount: number;
-  bankId: string | null;
+export interface PracticeRecord {
+  questionId: number;
+  correct: boolean;
+  userChoice: string;
+  at: number;
 }
 
-export interface ExamResult {
+export interface ExamSession {
   sessionId: string;
   total: number;
   correct: number;

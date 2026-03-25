@@ -10,7 +10,7 @@ export default defineConfig({
   expect: { timeout: 30_000 },
   reporter: 'list',
   use: {
-    baseURL: 'http://127.0.0.1:8765',
+    baseURL: 'http://127.0.0.1:5174',
     trace: 'on-first-retry',
     viewport: { width: 390, height: 844 },
   },
@@ -18,10 +18,10 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_SKIP_SERVER
     ? undefined
     : {
-        command: 'CI=1 npx expo start --web --port 8765',
-        url: 'http://127.0.0.1:8765',
+        command: 'npm run build && npm run preview:test',
+        url: 'http://127.0.0.1:5174',
         reuseExistingServer: !process.env.CI,
-        timeout: 180_000,
+        timeout: 300_000,
         stdout: 'pipe',
         stderr: 'pipe',
       },
