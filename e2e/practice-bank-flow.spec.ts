@@ -62,7 +62,7 @@ async function pickAnyAnswer(page: Page) {
 
 test.describe('题库加载与练习做题', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('./');
     await page.waitForLoadState('domcontentloaded');
     await expect(page.getByText('练习', { exact: true }).first()).toBeVisible({
       timeout: 60_000,

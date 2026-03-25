@@ -37,15 +37,16 @@ export function ExamQuiz() {
   const questions = state?.questions ?? [];
   const durationMinutes = state?.durationMinutes ?? 30;
   const [idx, setIdx] = useState(0);
-  const [choice, setChoice] = useState<string | null>(null);
   const [answers, setAnswers] = useState<(string | null)[]>(() =>
     questions.map(() => null)
   );
   const [started] = useState(() => Date.now());
   const [leftSec, setLeftSec] = useState(durationMinutes * 60);
-  const snap = useRef({ answers, idx, choice });
-  snap.current = { answers, idx, choice };
+  const snap = useRef({ answers, idx });
+  snap.current = { answers, idx };
   const timeUpDone = useRef(false);
+
+  const choice = answers[idx] ?? null;
 
   const finalize = (finalAnswers: (string | null)[]) => {
     const total = questions.length;
@@ -80,10 +81,8 @@ export function ExamQuiz() {
   useEffect(() => {
     if (leftSec !== 0 || questions.length === 0 || timeUpDone.current) return;
     timeUpDone.current = true;
-    const { answers: a, idx: i, choice: ch } = snap.current;
-    const copy = [...a];
-    copy[i] = ch ?? copy[i] ?? null;
-    finalize(copy);
+    const { answers: a } = snap.current;
+    finalize([...a]);
   }, [leftSec, questions.length]);
 
   const q = questions[idx];
@@ -92,26 +91,29 @@ export function ExamQuiz() {
   if (!q) return null;
 
   const onChoose = (label: string) => {
-    if (choice !== null) return;
-    setChoice(label);
+    setAnswers((prev) => {
+      if (prev[idx] !== null) return prev;
+      const next = [...prev];
+      next[idx] = label;
+      return next;
+    });
+  };
+
+  const prev = () => {
+    if (idx <= 0) return;
+    setIdx((i) => i - 1);
   };
 
   const next = () => {
-    const copy = [...answers];
-    copy[idx] = choice;
     if (idx + 1 >= total) {
-      finalize(copy);
+      finalize([...answers]);
       return;
     }
-    setAnswers(copy);
     setIdx((i) => i + 1);
-    setChoice(null);
   };
 
   const submitAll = () => {
-    const copy = [...answers];
-    copy[idx] = choice ?? copy[idx] ?? null;
-    finalize(copy);
+    finalize([...answers]);
   };
 
   const mm = String(Math.floor(leftSec / 60)).padStart(2, '0');
@@ -130,12 +132,10 @@ export function ExamQuiz() {
       </p>
       <QuestionCard question={q} userChoice={choice} onChoose={onChoose} />
       <div className="quiz-actions">
-        <button
-          type="button"
-          className="primary-btn"
-          disabled={choice === null}
-          onClick={next}
-        >
+        <button type="button" className="secondary-btn" disabled={idx === 0} onClick={prev}>
+          上一题
+        </button>
+        <button type="button" className="primary-btn" onClick={next}>
           {idx + 1 >= total ? '完成' : '下一题'}
         </button>
       </div>

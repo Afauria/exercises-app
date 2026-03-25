@@ -23,8 +23,13 @@ const BankCtx = createContext<{
   importFromTxt: (text: string) => { ok: boolean; message: string };
 } | null>(null);
 
+function builtinBankFetchUrl(): string {
+  const base = import.meta.env.BASE_URL;
+  return base.endsWith('/') ? `${base}bank.json` : `${base}/bank.json`;
+}
+
 async function fetchBuiltin(): Promise<BankDocument> {
-  const res = await fetch('/bank.json');
+  const res = await fetch(builtinBankFetchUrl());
   if (!res.ok) throw new Error(`无法加载题库：HTTP ${res.status}`);
   return res.json() as Promise<BankDocument>;
 }

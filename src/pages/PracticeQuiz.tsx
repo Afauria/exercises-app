@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { QuestionCard } from '../components/QuestionCard';
 import type { Question } from '../types/models';
@@ -34,7 +34,11 @@ export function PracticeQuiz() {
   const questions = state?.questions ?? [];
   const [loading, setLoading] = useState(true);
   const [idx, setIdx] = useState(0);
-  const [choice, setChoice] = useState<string | null>(null);
+  const [answers, setAnswers] = useState<(string | null)[]>(() =>
+    questions.map(() => null)
+  );
+  /** 本题在本轮中是否已写入练习记录（离开本题时写入） */
+  const writtenForIndexRef = useRef<Set<number>>(new Set());
   const [favTick, setFavTick] = useState(0);
 
   useEffect(() => {
@@ -54,6 +58,8 @@ export function PracticeQuiz() {
     [idx, total, q]
   );
 
+  const choice = answers[idx] ?? null;
+
   const favIds = useMemo(() => new Set(getFavoriteIds()), [favTick, q?.id]);
   const toggleFav = () => {
     if (!q) return;
@@ -66,29 +72,65 @@ export function PracticeQuiz() {
   };
 
   const onChoose = (label: string) => {
-    if (!q || choice !== null) return;
-    setChoice(label);
-    const ok = isCorrect(q, label);
+    if (!q) return;
+    setAnswers((prev) => {
+      if (prev[idx] !== null) return prev;
+      const next = [...prev];
+      next[idx] = label;
+      return next;
+    });
+  };
+
+  /** 离开下标 i 的题目时写入统计与错题（跳过记为错误并进入错题本） */
+  const flushAtIndex = (i: number) => {
+    if (writtenForIndexRef.current.has(i)) return;
+    const cur = questions[i];
+    if (!cur) return;
+    writtenForIndexRef.current.add(i);
+    const ans = answers[i];
+    if (ans == null) {
+      appendPracticeRecord({
+        questionId: cur.id,
+        correct: false,
+        userChoice: '(跳过)',
+        at: Date.now(),
+      });
+      const w = new Set(getWrongIds());
+      w.add(cur.id);
+      setWrongIds([...w]);
+      return;
+    }
+    const ok = isCorrect(cur, ans);
     appendPracticeRecord({
-      questionId: q.id,
+      questionId: cur.id,
       correct: ok,
-      userChoice: label,
+      userChoice: ans,
       at: Date.now(),
     });
     if (!ok) {
       const w = new Set(getWrongIds());
-      w.add(q.id);
+      w.add(cur.id);
       setWrongIds([...w]);
     }
   };
 
+  const prev = () => {
+    if (idx <= 0) return;
+    const target = idx - 1;
+    // 回到尚未选题的题目时，允许再次离开时再记一条（例如先跳过再返回补答）
+    if (answers[target] == null) {
+      writtenForIndexRef.current.delete(target);
+    }
+    setIdx(target);
+  };
+
   const next = () => {
+    flushAtIndex(idx);
     if (idx + 1 >= total) {
       navigate('/practice');
       return;
     }
     setIdx((i) => i + 1);
-    setChoice(null);
   };
 
   if (loading || !q) {
@@ -108,17 +150,23 @@ export function PracticeQuiz() {
         <button
           type="button"
           className="secondary-btn"
-          onClick={() => navigate('/practice')}
+          onClick={() => {
+            flushAtIndex(idx);
+            navigate('/practice');
+          }}
         >
           返回练习列表
         </button>
         <button
           type="button"
-          className="primary-btn"
-          disabled={choice === null}
-          onClick={next}
+          className="secondary-btn"
+          disabled={idx === 0}
+          onClick={prev}
         >
-          下一题
+          上一题
+        </button>
+        <button type="button" className="primary-btn" onClick={next}>
+          {idx + 1 >= total ? '完成' : '下一题'}
         </button>
       </div>
     </div>

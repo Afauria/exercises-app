@@ -18,7 +18,11 @@ export function Stats() {
   useEffect(() => {
     const on = () => bump();
     window.addEventListener('app-storage-cleared', on);
-    return () => window.removeEventListener('app-storage-cleared', on);
+    window.addEventListener('app-data-updated', on);
+    return () => {
+      window.removeEventListener('app-storage-cleared', on);
+      window.removeEventListener('app-data-updated', on);
+    };
   }, [bump]);
 
   const records = useMemo(() => getPracticeRecords(), [tick]);

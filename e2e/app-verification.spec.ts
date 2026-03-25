@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('题库应用功能验证', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('./');
     await page.waitForLoadState('domcontentloaded');
     await expect(page.getByText('练习', { exact: true }).first()).toBeVisible({
       timeout: 60_000,

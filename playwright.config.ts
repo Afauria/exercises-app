@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
+/** 与 vite.config 中 GitHub Pages base 一致（无前导 host） */
+export const E2E_BASE_PATH = '/ai_test';
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -10,7 +13,7 @@ export default defineConfig({
   expect: { timeout: 30_000 },
   reporter: 'list',
   use: {
-    baseURL: 'http://127.0.0.1:5174',
+    baseURL: `http://127.0.0.1:5174${E2E_BASE_PATH}/`,
     trace: 'on-first-retry',
     viewport: { width: 390, height: 844 },
   },
@@ -19,7 +22,7 @@ export default defineConfig({
     ? undefined
     : {
         command: 'npm run build && npm run preview:test',
-        url: 'http://127.0.0.1:5174',
+        url: `http://127.0.0.1:5174${E2E_BASE_PATH}/`,
         reuseExistingServer: !process.env.CI,
         timeout: 300_000,
         stdout: 'pipe',

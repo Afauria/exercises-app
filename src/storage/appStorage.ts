@@ -25,12 +25,18 @@ function writeJson(key: string, value: unknown) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+/** 同标签页内通知各页面刷新（localStorage 的 storage 事件仅在其它标签页触发） */
+export function notifyAppDataUpdated() {
+  window.dispatchEvent(new CustomEvent('app-data-updated'));
+}
+
 export function getWrongIds(): number[] {
   return readJson<number[]>(STORAGE_KEYS.wrongIds, []);
 }
 
 export function setWrongIds(ids: number[]) {
   writeJson(STORAGE_KEYS.wrongIds, ids);
+  notifyAppDataUpdated();
 }
 
 export function getFavoriteIds(): number[] {
@@ -39,6 +45,7 @@ export function getFavoriteIds(): number[] {
 
 export function setFavoriteIds(ids: number[]) {
   writeJson(STORAGE_KEYS.favoriteIds, ids);
+  notifyAppDataUpdated();
 }
 
 export function getPracticeRecords(): PracticeRecord[] {
@@ -49,6 +56,7 @@ export function appendPracticeRecord(r: PracticeRecord) {
   const all = getPracticeRecords();
   all.push(r);
   writeJson(STORAGE_KEYS.practiceRecords, all);
+  notifyAppDataUpdated();
 }
 
 export function getExamSessions(): ExamSession[] {
@@ -59,6 +67,7 @@ export function appendExamSession(s: ExamSession) {
   const all = getExamSessions();
   all.push(s);
   writeJson(STORAGE_KEYS.examSessions, all);
+  notifyAppDataUpdated();
 }
 
 export function getRevealAll(): boolean {

@@ -9,7 +9,9 @@ npm install
 npm run dev
 ```
 
-浏览器访问终端提示的本地地址（默认 `http://localhost:5173`）。`dev` 会先执行一次题库 JSON 生成脚本。
+浏览器访问终端提示的本地地址。默认 `base` 为 **`/ai_test/`**（与 GitHub Pages 项目站路径一致），开发时请打开 **`http://localhost:5173/ai_test/`**（注意末尾路径）。`dev` 会先执行一次题库 JSON 生成脚本。
+
+若需根路径部署，构建前设置环境变量，例如：`VITE_BASE=/ npm run build`（根路径需配合托管方 SPA 回退）。
 
 ## 构建与部署
 
@@ -17,7 +19,14 @@ npm run dev
 npm run build
 ```
 
-产物在 `dist/`。将 `dist/` 内文件上传到静态站点（如 GitHub Pages、对象存储 + CDN、Nginx 根目录等）。确保服务器对所有路由回退到 `index.html`（SPA history fallback），或使用仅哈希路由时可省略（当前为 History 模式，需 fallback）。
+产物在 `dist/`。将 **`dist/` 下全部内容**（含 `404.html`）上传到静态站点。
+
+**GitHub Pages（项目站 `https://<user>.github.io/<仓库名>/`）**  
+- 默认按仓库名 **`ai_test`** 配置，资源前缀为 `/ai_test/`。若仓库名不同，请改 `vite.config.ts` 中的默认 `base`，或构建时使用 `VITE_BASE=/你的仓库名/`。  
+- 路由采用 **Hash 模式**（地址形如 `.../ai_test/#/practice`）：刷新时只请求 `index.html`，不会出现「`/ai_test/practice` 刷新 404」的问题。  
+- 构建脚本仍会复制 **`404.html`**，可作备用（例如误打开非 hash 路径时）。
+
+其它托管需配置「所有未匹配路径回退到 `index.html`」；根目录部署时用 `VITE_BASE=/` 构建。
 
 内置 `bank.json` 会随 `prebuild` 写入 `public/` 并打进包内；也可在应用内通过「数据与题库 → 导入本地 TXT」覆盖为自定义题库（存于 `localStorage`）。
 
@@ -32,7 +41,7 @@ npm run build
 npm run verify
 ```
 
-将安装 Chromium（如未安装）、执行 `tsc`、生产构建，并启动 `vite preview`（`127.0.0.1:5174`）跑 Playwright 用例。
+将安装 Chromium（如未安装）、执行 `tsc`、生产构建，并启动 `vite preview`（`http://127.0.0.1:5174/ai_test/`）跑 Playwright 用例。
 
 若本地已有预览进程占用 5174，请先结束该进程再运行。
 
