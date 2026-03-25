@@ -2,6 +2,8 @@
 
 Vite + React + TypeScript 单页应用，构建产物为纯静态文件，可部署到任意静态托管；题库在构建时由 `assets/bundled-question-bank.txt` 解析生成 `public/bank.json`。
 
+**需求与功能边界**见 [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md)（便于复用与迭代）。
+
 ## 开发
 
 ```bash
