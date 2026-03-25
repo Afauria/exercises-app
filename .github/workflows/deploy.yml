@@ -1,0 +1,46 @@
+name: Deploy to GitHub Pages
+
+on:
+  # 两种触发方式：
+  # 1. 推送到 main 分支时自动触发
+  push:
+    branches: [ "main" ]
+  # 2. 允许手动在网页触发（可选）
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      # 1. 拉取代码
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      # 2. 设置 Node.js 环境
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'  # 缓存依赖，加速构建
+      
+      # 3. 安装依赖
+      - name: Install Dependencies
+        run: npm ci
+      
+      # 4. 构建项目（你的构建命令）
+      - name: Build
+        run: npm run build
+        # 如果你的命令是 "yarn build" 或 "pnpm build"，请相应修改
+      
+      # 5. 部署到 GitHub Pages
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+          # 可选：保留提交历史
+          force_orphan: false
