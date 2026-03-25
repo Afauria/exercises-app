@@ -1,21 +1,98 @@
-# 题库练习（静态 Web）
+# 题库练习 · 静态 Web
 
-Vite + React + TypeScript 单页应用，构建产物为纯静态文件，可部署到任意静态托管；题库在构建时由 `assets/bundled-question-bank.txt` 解析生成 `public/bank.json`。
+[![Deploy](https://github.com/Afauria/exercises-app/actions/workflows/deploy.yml/badge.svg)](https://github.com/Afauria/exercises-app/actions/workflows/deploy.yml)
 
-**需求与功能边界**见 [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md)（便于复用与迭代）。
+基于 **Vite + React + TypeScript** 的题库练习单页应用：构建产物为纯静态文件，可部署到 **GitHub Pages** 或任意静态托管；支持练习、模拟考试、错题本、收藏与统计，数据保存在浏览器 `localStorage`。
 
-## 开发
+---
+
+## 目录
+
+- [功能特性](#功能特性)
+- [技术栈](#技术栈)
+- [环境要求](#环境要求)
+- [快速开始](#快速开始)
+- [可用脚本](#可用脚本)
+- [本地开发](#本地开发)
+- [构建与部署](#构建与部署)
+- [测试](#测试)
+- [文档](#文档)
+- [仓库结构](#仓库结构)
+
+---
+
+## 功能特性
+
+| 模块 | 说明 |
+|------|------|
+| **练习** | 按节刷题（每节 50 题）、随机一节、题号/题干搜索；支持上一题/下一题、可跳过；错题与练习统计落库 |
+| **考试** | 选节、限时、抽题、交卷与成绩记录 |
+| **错题 / 收藏** | 错题列表、收藏列表，可跳转重练 |
+| **统计** | 练习正确率、题库总量、近 30 日节奏、考试记录 |
+| **数据** | 清空本地记录、导入内置题库、导入本地 TXT（解析后存 `localStorage`，受容量限制） |
+
+路由为 **Hash 模式**（例如 `https://用户名.github.io/仓库名/#/practice`），刷新子页面不依赖服务端 rewrite。
+
+---
+
+## 技术栈
+
+| 类别 | 选型 |
+|------|------|
+| 运行时 | React 19、TypeScript |
+| 构建 | Vite 6 |
+| 路由 | react-router-dom 7（`HashRouter`） |
+| 样式 | 全局 CSS |
+| E2E | Playwright |
+
+---
+
+## 环境要求
+
+- **Node.js** ≥ 18（与 CI 一致即可）
+- 现代浏览器（含移动端）
+
+---
+
+## 快速开始
 
 ```bash
-npm install
+git clone https://github.com/Afauria/exercises-app.git
+cd exercises-app
+npm ci
 npm run dev
 ```
 
-浏览器访问终端提示的本地地址。本地默认 `base` 为 **`/ai_test/`**（仅本地回退；与 Playwright 一致），开发时请打开 **`http://localhost:5173/ai_test/`**。
+在浏览器打开终端提示的地址。本地默认需访问带 **base 路径** 的 URL（见下节）。
 
-**GitHub Actions** 构建时会带上环境变量 **`GITHUB_REPOSITORY`**，`vite.config` 会自动使用 **`/<仓库名>/`**，与 `https://<用户>.github.io/<仓库名>/` 一致，一般**不必改路径**。
+---
 
-手动覆盖：`VITE_BASE=/你的路径/`（根站点用 `VITE_BASE=/`）。
+## 可用脚本
+
+| 命令 | 说明 |
+|------|------|
+| `npm run dev` | 生成 `public/bank.json` 后启动开发服务器 |
+| `npm run build` | 生产构建；输出 `dist/`，并复制 `index.html` → `404.html` |
+| `npm run preview` | 本地预览生产构建 |
+| `npm run preview:test` | 在 `127.0.0.1:5174` 以固定端口预览（供 E2E） |
+| `npm run test:e2e` | 运行 Playwright（需已构建或配置 `webServer`） |
+| `npm run verify` | `tsc` + 安装 Chromium + `build` + E2E，作为合并前验收 |
+
+---
+
+## 本地开发
+
+- 默认 **Vite `base`** 在本地回退为 **`/ai_test/`**（与 Playwright 默认一致）。开发时请访问：  
+  **`http://localhost:5173/ai_test/`**
+- **CI / GitHub Actions** 构建时会注入 **`GITHUB_REPOSITORY`**，`vite.config` 自动使用 **`/<仓库名>/`**，与  
+  `https://<用户>.github.io/<仓库名>/` 对齐，一般无需手改。
+- 手动覆盖：构建或开发前设置  
+  `VITE_BASE=/你的前缀/`  
+  （根路径站点使用 `VITE_BASE=/`）。
+
+题库源文件：`assets/bundled-question-bank.txt` → 构建脚本生成 **`public/bank.json`**。
+
+---
 
 ## 构建与部署
 
@@ -23,45 +100,78 @@ npm run dev
 npm run build
 ```
 
-产物在 `dist/`。将 **`dist/` 下全部内容**（含 `404.html`）上传到静态站点。
+将 **`dist/` 目录内全部文件**（含 `404.html`、`bank.json`、`assets/`）上传到静态站点根目录（或等价配置）。
 
-**GitHub Pages（`gh-pages` 分支 = `dist` 根目录）**  
-- 项目站 URL：`https://<user>.github.io/<仓库名>/`。构建在 **GitHub Actions** 上执行时，**`base` 自动为 `/<仓库名>/`**（读 `GITHUB_REPOSITORY`）。本地构建若要模拟线上，可执行：  
-  `GITHUB_REPOSITORY=你的名/你的仓库名 npm run build`  
-- 路由为 **Hash**（如 `.../<仓库名>/#/practice`），刷新不会请求不存在的 `/practice` 路径。  
-- **`404.html`** 由构建脚本复制，可作备用。
+### GitHub Pages
 
-其它托管需配置「所有未匹配路径回退到 `index.html`」；根目录部署时用 `VITE_BASE=/` 构建。
+本仓库提供 **`.github/workflows/deploy.yml`**：在推送 **`main`** 时执行 `npm ci` + `npm run build`，并通过 **peaceiris/actions-gh-pages** 将 **`dist/`** 发布到 **`gh-pages`** 分支。
 
-内置 `bank.json` 会随 `prebuild` 写入 `public/` 并打进包内；也可在应用内通过「数据与题库 → 导入本地 TXT」覆盖为自定义题库（存于 `localStorage`）。
+请在仓库 **Settings → Pages** 中将源设为 **`gh-pages` 分支**（通常为根目录）。
 
-## 数据与清空
+### 其它托管
 
-- **清空全部数据**：清除错题、收藏、练习记录、考试记录、全局「显示答案」状态；**不删除**内置 `bank.json` 题库，分节列表仍在。
-- **导入内置题库**：清除自定义题库缓存并刷新页面，恢复默认 `bank.json`。
+若使用 History 模式以外的纯静态托管，需自行配置「未匹配路径回退到 `index.html`」；当前项目以 **Hash 路由** 为主，对静态托管友好。
 
-## 验收（类型检查 + E2E）
+---
+
+## 测试
 
 ```bash
 npm run verify
 ```
 
-将安装 Chromium（如未安装）、执行 `tsc`、生产构建，并启动 `vite preview`（`http://127.0.0.1:5174/ai_test/`）跑 Playwright 用例。
+若本机 **5174** 已被占用，请先结束占用进程再运行。
 
-若本地已有预览进程占用 5174，请先结束该进程再运行。
-
-仅跑 E2E（需已构建且预览服务可用，或由 Playwright 自动拉起）：
+仅跑 E2E（且自行保证预览服务可用时）：
 
 ```bash
 npm run test:e2e
 ```
 
-跳过 Playwright 自带 Web 服务（自行提供服务）时：
+跳过 Playwright 内置 Web 服务：
 
 ```bash
 PLAYWRIGHT_SKIP_SERVER=1 npm run test:e2e
 ```
 
-## 分支说明
+Playwright 的 **`baseURL`** 与 Vite **`base`** 需一致；本地可通过环境变量 **`E2E_BASE`** 覆盖默认路径。
 
-`master` 上保留迁移前快照；静态站实现在分支 `refactor/static-html`。
+---
+
+## 文档
+
+| 文档 | 说明 |
+|------|------|
+| [**docs/REQUIREMENTS.md**](docs/REQUIREMENTS.md) | 需求说明、数据约定、路由与验收范围，便于复用与迭代 |
+
+---
+
+## 仓库结构
+
+```
+├── assets/                 # 内置题库 TXT（构建生成 bank.json）
+├── docs/                   # 需求等文档
+├── e2e/                    # Playwright 用例
+├── public/                 # 静态资源（含构建生成的 bank.json）
+├── scripts/                # build-bank-json、gh-pages 404 复制等
+├── src/
+│   ├── components/         # 布局、顶栏、题目卡片等
+│   ├── context/            # 题库加载与上下文
+│   ├── lib/                # 分节常量等
+│   ├── pages/              # 各业务页面
+│   ├── parsers/            # TXT 解析
+│   ├── storage/            # localStorage 封装
+│   └── ...
+├── index.html
+├── vite.config.ts
+└── playwright.config.ts
+```
+
+---
+
+## 数据说明（摘要）
+
+- **清空全部数据**：清除错题、收藏、练习记录、考试记录、全局「显示答案」；**不删除**已导入的自定义题库 JSON。
+- **导入内置题库**：清除自定义题库缓存并刷新，恢复随包 **`bank.json`**。
+
+更多字段与行为见 [**docs/REQUIREMENTS.md**](docs/REQUIREMENTS.md)。
