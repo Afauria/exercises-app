@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "bank:from-html": "tsx scripts/fetch-html-to-bank.ts",
+    "bank:json-to-txt": "tsx scripts/bank-json-to-txt.ts",
     "prebuild": "tsx scripts/build-bank-json.ts",
     "build": "vite build && node scripts/copy-gh-spa-fallback.mjs",
     "dev": "tsx scripts/build-bank-json.ts && vite",
@@ -22,6 +24,7 @@
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.5.0",
+    "cheerio": "^1.2.0",
     "tsx": "^4.19.3",
     "typescript": "~5.9.2",
     "vite": "^6.3.0"

@@ -1,22 +1,34 @@
 import { useEffect, useState } from 'react';
 import type { Question } from '../types/models';
 import { getRevealAll } from '../storage/appStorage';
+import {
+  isCorrectOptionLabel,
+  normalizeMultiAnswer,
+  normalizeQuestionType,
+} from '../lib/questionAnswer';
 
-function normalizeChoice(ans: string): string {
-  const t = ans.trim().toUpperCase();
-  if (/^[A-D]$/.test(t)) return t;
-  return ans.trim();
+function selectedLabels(choice: string | null): Set<string> {
+  if (!choice) return new Set();
+  const norm = normalizeMultiAnswer(choice);
+  if (!norm) return new Set();
+  return new Set(norm.split(','));
 }
 
 export function QuestionCard({
   question,
   userChoice,
   onChoose,
+  answerRevealed,
+  onMultiSubmit,
   disabled,
 }: {
   question: Question;
   userChoice: string | null;
   onChoose: (label: string) => void;
+  /** 为 true 时展示正误色与解析（多选题需提交后才会为 true，除非全局「显示答案」） */
+  answerRevealed: boolean;
+  /** 多选题专用：点击「提交答案」后由父组件将 answerRevealed 置为 true */
+  onMultiSubmit?: () => void;
   disabled?: boolean;
 }) {
   const [revealAll, setRevealAll] = useState(getRevealAll);
@@ -26,7 +38,10 @@ export function QuestionCard({
     return () => window.removeEventListener('app-reveal-changed', on);
   }, []);
 
-  const showAnswer = revealAll || userChoice !== null;
+  const qt = normalizeQuestionType(question);
+  const showAnswer = revealAll || answerRevealed;
+
+  const multiSelected = selectedLabels(userChoice);
 
   return (
     <article className="question-card">
@@ -34,11 +49,13 @@ export function QuestionCard({
         <strong>{question.ordinal}.</strong> {question.stem}
       </p>
 
-      {question.qtype === 'choice' && question.options && (
+      {(qt === 'single' || qt === 'multi') && question.options && (
         <div className="options">
           {question.options.map((o) => {
-            const picked = userChoice === o.label;
-            const isRight = normalizeChoice(o.label) === normalizeChoice(question.answer);
+            const label = o.label.trim().toUpperCase();
+            const picked =
+              qt === 'multi' ? multiSelected.has(label) : userChoice === o.label;
+            const isRight = isCorrectOptionLabel(question, o.label);
             let cls = 'opt-btn';
             if (showAnswer) {
               if (isRight) cls += ' opt-right';
@@ -56,10 +73,17 @@ export function QuestionCard({
               </button>
             );
           })}
+          {qt === 'multi' && onMultiSubmit && !showAnswer && (
+            <div className="multi-submit-row">
+              <button type="button" className="primary-btn multi-submit-btn" onClick={onMultiSubmit}>
+                提交答案
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {question.qtype === 'boolean' && (
+      {qt === 'boolean' && (
         <div className="options bool-row">
           {(['正确', '错误'] as const).map((label) => {
             const picked = userChoice === label;

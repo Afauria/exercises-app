@@ -15,7 +15,7 @@ const OPTION_RE = /^\s*([A-D])[\.．]\s*(.*)$/;
 const NEW_Q_RE = /^(\d+)\.\s*(.*)$/;
 
 /**
- * 解析题库文本：单选题（A-D）与判断题（正确/错误）
+ * 解析题库文本：单选（答案 A）、多选（答案 A,B 或 A, B）、判断（正确/错误）
  */
 export function parseQuestionBank(raw: string): {
   questions: ParsedQuestion[];
@@ -114,19 +114,33 @@ export function parseQuestionBank(raw: string): {
       continue;
     }
 
-    const type: QuestionType =
-      options.length > 0 ? 'choice' : 'boolean';
+    let type: QuestionType;
+    let normalizedAnswer: string;
 
-    if (type === 'boolean') {
+    if (options.length === 0) {
+      type = 'boolean';
       if (answer !== '正确' && answer !== '错误') {
         errors.push(
           `题号 ${ordinal}：判断题答案应为「正确」或「错误」，得到「${answer}」`
         );
         continue;
       }
-    } else if (!/^[A-D]$/.test(answer)) {
-      errors.push(`题号 ${ordinal}：选择题答案应为 A-D，得到「${answer}」`);
-      continue;
+      normalizedAnswer = answer;
+    } else {
+      const compact = answer.replace(/\s+/g, '').toUpperCase().replace(/，/g, ',');
+      if (/^[A-D]$/.test(compact)) {
+        type = 'single';
+        normalizedAnswer = compact;
+      } else if (/^[A-D](,[A-D])+$/.test(compact)) {
+        type = 'multi';
+        const parts = compact.split(',').filter(Boolean);
+        normalizedAnswer = [...new Set(parts)].sort().join(',');
+      } else {
+        errors.push(
+          `题号 ${ordinal}：选择题答案应为单个字母或逗号分隔的多个字母（如 A,B），得到「${answer}」`
+        );
+        continue;
+      }
     }
 
     questions.push({
@@ -134,7 +148,7 @@ export function parseQuestionBank(raw: string): {
       stem,
       type,
       options,
-      answer,
+      answer: normalizedAnswer,
       explanation,
     });
   }

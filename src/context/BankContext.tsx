@@ -8,8 +8,16 @@ import {
   type ReactNode,
 } from 'react';
 import type { BankDocument, Question } from '../types/models';
+import { normalizeBankQuestions } from '../lib/questionAnswer';
 import { getCustomBankJson, setCustomBankJson } from '../storage/appStorage';
 import { parseQuestionBank } from '../parsers/questionBankParser';
+
+function normalizeDoc(doc: BankDocument): BankDocument {
+  return {
+    ...doc,
+    questions: normalizeBankQuestions(doc.questions),
+  };
+}
 
 type BankState =
   | { status: 'loading' }
@@ -46,7 +54,7 @@ function parseDocFromTxt(text: string): { doc: BankDocument | null; message: str
     qtype: q.type,
     answer: q.answer,
     explanation: q.explanation || null,
-    options: q.type === 'choice' ? q.options : null,
+    options: q.type === 'boolean' ? null : q.options,
   }));
   const doc: BankDocument = {
     bankName: '导入题库',
@@ -64,11 +72,11 @@ export function BankProvider({ children }: { children: ReactNode }) {
     try {
       const custom = getCustomBankJson();
       if (custom) {
-        const doc = JSON.parse(custom) as BankDocument;
+        const doc = normalizeDoc(JSON.parse(custom) as BankDocument);
         setState({ status: 'ready', doc });
         return;
       }
-      const doc = await fetchBuiltin();
+      const doc = normalizeDoc(await fetchBuiltin());
       setState({ status: 'ready', doc });
     } catch (e) {
       setState({
@@ -83,8 +91,9 @@ export function BankProvider({ children }: { children: ReactNode }) {
   }, [load]);
 
   const applyImportedDoc = useCallback((doc: BankDocument) => {
-    setCustomBankJson(JSON.stringify(doc));
-    setState({ status: 'ready', doc });
+    const normalized = normalizeDoc(doc);
+    setCustomBankJson(JSON.stringify(normalized));
+    setState({ status: 'ready', doc: normalized });
   }, []);
 
   const importFromTxt = useCallback(

@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { QuestionCard } from '../components/QuestionCard';
 import { useSwipePrevNext } from '../hooks/useSwipePrevNext';
 import type { Question } from '../types/models';
 import { isAnswerCorrect, normalizeQuestionType, questionTypeLabel } from '../lib/questionAnswer';
-import { appendExamSession } from '../storage/appStorage';
+import { appendExamSession, getRevealAll } from '../storage/appStorage';
 
 function scoreExam(questions: Question[], answers: (string | null)[]): number {
   let c = 0;
@@ -21,12 +21,18 @@ export function ExamQuiz() {
     state?: { questions?: Question[]; durationMinutes?: number };
   };
   const questions = state?.questions ?? [];
+  const bankKey = useMemo(() => questions.map((x) => x.id).join(','), [questions]);
+
   const durationMinutes = state?.durationMinutes ?? 30;
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<(string | null)[]>(() =>
     questions.map(() => null)
   );
   const [revealed, setRevealed] = useState<boolean[]>(() => questions.map(() => false));
+  const [multiSubmitted, setMultiSubmitted] = useState<boolean[]>(() =>
+    questions.map(() => false)
+  );
+  const [, setRevealTick] = useState(0);
   const [started] = useState(() => Date.now());
   const [leftSec, setLeftSec] = useState(durationMinutes * 60);
   const snap = useRef({ answers, idx });
@@ -34,6 +40,19 @@ export function ExamQuiz() {
   const timeUpDone = useRef(false);
   const swipeAreaRef = useRef<HTMLDivElement>(null);
   const swipeHandlersRef = useRef({ prev: () => {}, next: () => {} });
+
+  useEffect(() => {
+    const fn = () => setRevealTick((t) => t + 1);
+    window.addEventListener('app-reveal-changed', fn);
+    return () => window.removeEventListener('app-reveal-changed', fn);
+  }, []);
+
+  useEffect(() => {
+    setIdx(0);
+    setAnswers(questions.map(() => null));
+    setRevealed(questions.map(() => false));
+    setMultiSubmitted(questions.map(() => false));
+  }, [bankKey]);
 
   const choice = answers[idx] ?? null;
 
@@ -50,17 +69,17 @@ export function ExamQuiz() {
   };
 
   const finalize = (finalAnswers: (string | null)[]) => {
-    const total = questions.length;
+    const totalN = questions.length;
     const correct = scoreExam(questions, finalAnswers);
     appendExamSession({
       sessionId: crypto.randomUUID(),
-      total,
+      total: totalN,
       correct,
       durationSec: Math.floor((Date.now() - started) / 1000),
       endedAt: Date.now(),
     });
     navigate('/exam/result', {
-      state: { total, correct },
+      state: { total: totalN, correct },
       replace: true,
     });
   };
@@ -118,6 +137,8 @@ export function ExamQuiz() {
     });
   };
 
+  const revealAllGlobal = getRevealAll();
+
   const prev = () => {
     if (total === 0 || idx <= 0) return;
     markRevealed(idx);
@@ -126,6 +147,9 @@ export function ExamQuiz() {
 
   const next = () => {
     if (total === 0) return;
+    if (q && normalizeQuestionType(q) === 'multi' && !multiSubmitted[idx] && !revealAllGlobal) {
+      return;
+    }
     markRevealed(idx);
     if (idx + 1 >= total) {
       finalize([...answers]);
@@ -149,7 +173,13 @@ export function ExamQuiz() {
   if (!q) return null;
 
   const qt = normalizeQuestionType(q);
-  const answerRevealed = revealed[idx] || (choice != null && qt !== 'multi');
+  const answerRevealed =
+    revealAllGlobal ||
+    revealed[idx] ||
+    (qt === 'multi' ? multiSubmitted[idx] : choice !== null);
+
+  const multiNextBlocked =
+    qt === 'multi' && !multiSubmitted[idx] && !revealAllGlobal;
 
   return (
     <div className="quiz-page quiz-page-with-side-nav">
@@ -169,13 +199,29 @@ export function ExamQuiz() {
           userChoice={choice}
           onChoose={onChoose}
           answerRevealed={answerRevealed}
+          onMultiSubmit={
+            qt === 'multi'
+              ? () =>
+                  setMultiSubmitted((m) => {
+                    const n = [...m];
+                    n[idx] = true;
+                    return n;
+                  })
+              : undefined
+          }
         />
       </div>
       <aside className="quiz-nav-rail" aria-label="题目切换">
         <button type="button" className="secondary-btn" disabled={idx === 0} onClick={prev}>
           上一题
         </button>
-        <button type="button" className="primary-btn nav-next-btn" onClick={next}>
+        <button
+          type="button"
+          className="primary-btn nav-next-btn"
+          disabled={multiNextBlocked}
+          title={multiNextBlocked ? '请先点击「提交答案」' : undefined}
+          onClick={next}
+        >
           {idx + 1 >= total ? '完成' : '下一题'}
         </button>
       </aside>

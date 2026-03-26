@@ -14,6 +14,7 @@ import {
   getCompletedQuestionIds,
   getFavoriteIds,
   getPracticeAutoNextOnCorrect,
+  getRevealAll,
   getWrongIds,
   setFavoriteIds,
   setWrongIds,
@@ -25,12 +26,18 @@ export function PracticeQuiz() {
     state?: { questions?: Question[] };
   };
   const questions = state?.questions ?? [];
+  const bankKey = useMemo(() => questions.map((x) => x.id).join(','), [questions]);
+
   const [loading, setLoading] = useState(true);
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<(string | null)[]>(() =>
     questions.map(() => null)
   );
   const [revealed, setRevealed] = useState<boolean[]>(() => questions.map(() => false));
+  const [multiSubmitted, setMultiSubmitted] = useState<boolean[]>(() =>
+    questions.map(() => false)
+  );
+  const [, setRevealTick] = useState(0);
   const answersRef = useRef(answers);
   answersRef.current = answers;
   const writtenForIndexRef = useRef<Set<number>>(new Set());
@@ -39,6 +46,20 @@ export function PracticeQuiz() {
   const [recTick, setRecTick] = useState(0);
   const swipeAreaRef = useRef<HTMLDivElement>(null);
   const swipeHandlersRef = useRef({ prev: () => {}, next: () => {} });
+
+  useEffect(() => {
+    const fn = () => setRevealTick((t) => t + 1);
+    window.addEventListener('app-reveal-changed', fn);
+    return () => window.removeEventListener('app-reveal-changed', fn);
+  }, []);
+
+  useEffect(() => {
+    setIdx(0);
+    setAnswers(questions.map(() => null));
+    setRevealed(questions.map(() => false));
+    setMultiSubmitted(questions.map(() => false));
+    writtenForIndexRef.current = new Set();
+  }, [bankKey]);
 
   useEffect(() => {
     const fn = () => setRecTick((t) => t + 1);
@@ -153,6 +174,8 @@ export function PracticeQuiz() {
     }
   };
 
+  const revealAllGlobal = getRevealAll();
+
   const prev = () => {
     if (idx <= 0) return;
     markRevealed(idx);
@@ -164,6 +187,9 @@ export function PracticeQuiz() {
   };
 
   const next = () => {
+    if (q && normalizeQuestionType(q) === 'multi' && !multiSubmitted[idx] && !revealAllGlobal) {
+      return;
+    }
     flushAtIndex(idx);
     markRevealed(idx);
     if (idx + 1 >= total) {
@@ -200,7 +226,12 @@ export function PracticeQuiz() {
 
   const qt = normalizeQuestionType(q);
   const answerRevealed =
-    revealed[idx] || (choice != null && qt !== 'multi');
+    revealAllGlobal ||
+    revealed[idx] ||
+    (qt === 'multi' ? multiSubmitted[idx] : choice !== null);
+
+  const multiNextBlocked =
+    qt === 'multi' && !multiSubmitted[idx] && !revealAllGlobal;
 
   return (
     <div className="quiz-page">
@@ -219,6 +250,16 @@ export function PracticeQuiz() {
           userChoice={choice}
           onChoose={onChoose}
           answerRevealed={answerRevealed}
+          onMultiSubmit={
+            qt === 'multi'
+              ? () =>
+                  setMultiSubmitted((m) => {
+                    const n = [...m];
+                    n[idx] = true;
+                    return n;
+                  })
+              : undefined
+          }
         />
       </div>
       <div className="quiz-toolbar">
@@ -249,7 +290,13 @@ export function PracticeQuiz() {
             >
               上一题
             </button>
-            <button type="button" className="primary-btn quiz-toolbar-btn" onClick={next}>
+            <button
+              type="button"
+              className="primary-btn quiz-toolbar-btn"
+              disabled={multiNextBlocked}
+              title={multiNextBlocked ? '请先点击「提交答案」' : undefined}
+              onClick={next}
+            >
               {idx + 1 >= total ? '完成' : '下一题'}
             </button>
           </div>

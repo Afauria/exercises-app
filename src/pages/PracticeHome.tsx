@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBank, useQuestions } from '../context/BankContext';
 import {
-  getSectionCount,
+  getSectionSlices,
+  getSectionSlicesByType,
   isSectionFullyCompleted,
-  questionsInSection,
 } from '../lib/sectionConstants';
+import { questionTypeLabel } from '../lib/questionAnswer';
 import type { Question } from '../types/models';
 import { getCompletedQuestionIds } from '../storage/appStorage';
 
@@ -36,7 +37,8 @@ export function PracticeHome() {
     };
   }, []);
 
-  const sections = getSectionCount(all);
+  const slicesFlat = useMemo(() => getSectionSlices(all), [all]);
+  const groups = useMemo(() => getSectionSlicesByType(all), [all]);
   const matches = useMemo(() => filterSearch(all, query), [all, query]);
   const completedIds = useMemo(() => getCompletedQuestionIds(), [recTick]);
 
@@ -94,36 +96,42 @@ export function PracticeHome() {
       ) : (
         <>
           <h2 className="section-title">选择一节</h2>
-          <div className="section-grid">
-            {Array.from({ length: sections }, (_, i) => {
-              const secDone = isSectionFullyCompleted(all, i, completedIds);
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  className={`section-tile${secDone ? ' section-tile--complete' : ''}`}
-                  onClick={() =>
-                    navigate('/practice/quiz', {
-                      state: { questions: questionsInSection(all, i) },
-                    })
-                  }
-                >
-                  第 {i + 1} 节
-                  {secDone && (
-                    <span className="section-done-mark">（已完成）</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          {groups.map(({ qtype, slices }) => (
+            <div key={qtype} className="section-block">
+              <h3 className="section-subtitle">{questionTypeLabel(qtype)}</h3>
+              <div className="section-grid">
+                {slices.map((slice) => {
+                  const secDone = isSectionFullyCompleted(all, slice.sectionIndex, completedIds);
+                  return (
+                    <button
+                      key={slice.sectionNumber}
+                      type="button"
+                      className={`section-tile${secDone ? ' section-tile--complete' : ''}`}
+                      onClick={() =>
+                        navigate('/practice/quiz', {
+                          state: { questions: slice.questions },
+                        })
+                      }
+                    >
+                      第 {slice.sectionNumber} 节
+                      {secDone && (
+                        <span className="section-done-mark">（已完成）</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
           <button
             type="button"
             className="primary-btn random-btn"
-            disabled={sections === 0}
+            disabled={slicesFlat.length === 0}
             onClick={() => {
-              const idx = Math.floor(Math.random() * sections);
+              const ri = Math.floor(Math.random() * slicesFlat.length);
+              const pick = slicesFlat[ri]!;
               navigate('/practice/quiz', {
-                state: { questions: questionsInSection(all, idx) },
+                state: { questions: pick.questions },
               });
             }}
           >

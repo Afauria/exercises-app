@@ -1,4 +1,5 @@
-export type QuestionType = 'choice' | 'boolean';
+/** single：单选；multi：多选（answer 为逗号分隔字母，如 A,B,D） */
+export type QuestionType = 'single' | 'multi' | 'boolean';
 
 export interface QuestionOption {
   label: string;

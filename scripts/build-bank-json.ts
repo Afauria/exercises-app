@@ -19,7 +19,7 @@ const out = questions.map((q, i) => ({
   qtype: q.type,
   answer: q.answer,
   explanation: q.explanation || null,
-  options: q.type === 'choice' ? q.options : null,
+  options: q.type === 'boolean' ? null : q.options,
 }));
 
 fs.mkdirSync(outDir, { recursive: true });

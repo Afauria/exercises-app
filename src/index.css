@@ -99,10 +99,6 @@ body {
   font-size: 0.9rem;
 }
 
-.multi-hint {
-  margin: 0 0 10px;
-}
-
 .error-text {
   color: #b91c1c;
 }
@@ -124,6 +120,13 @@ body {
 .section-title {
   font-size: 1rem;
   margin: 0 0 8px;
+}
+
+.section-subtitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 12px 0 8px;
+  color: #334155;
 }
 
 .section-grid {
@@ -324,6 +327,14 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.multi-submit-row {
+  margin-top: 10px;
+}
+
+.multi-submit-btn {
+  align-self: flex-start;
 }
 
 .bool-row {

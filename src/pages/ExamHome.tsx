@@ -1,20 +1,25 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuestions } from '../context/BankContext';
-import { getSectionCount, questionsInSection } from '../lib/sectionConstants';
+import { getSectionSlices } from '../lib/sectionConstants';
+import { questionTypeLabel } from '../lib/questionAnswer';
 
 export function ExamHome() {
   const all = useQuestions();
   const navigate = useNavigate();
-  const sections = getSectionCount(all);
+  const slices = useMemo(() => getSectionSlices(all), [all]);
+  const sections = slices.length;
   const [sectionIndex, setSectionIndex] = useState(0);
   const [durationMinutes, setDurationMinutes] = useState(30);
   const [questionCount, setQuestionCount] = useState(20);
 
-  const pool = useMemo(
-    () => questionsInSection(all, sectionIndex),
-    [all, sectionIndex]
-  );
+  useEffect(() => {
+    if (sectionIndex >= sections && sections > 0) {
+      setSectionIndex(0);
+    }
+  }, [sectionIndex, sections]);
+
+  const pool = slices[sectionIndex]?.questions ?? [];
 
   const start = () => {
     const n = Math.min(Math.max(1, questionCount), pool.length || 1);
@@ -37,13 +42,13 @@ export function ExamHome() {
         <h2>1. 选择一节</h2>
         <select
           className="select-input"
-          value={sectionIndex}
+          value={Math.min(sectionIndex, Math.max(0, sections - 1))}
           onChange={(e) => setSectionIndex(Number(e.target.value))}
           disabled={sections === 0}
         >
-          {Array.from({ length: sections }, (_, i) => (
-            <option key={i} value={i}>
-              第 {i + 1} 节
+          {slices.map((s, i) => (
+            <option key={s.sectionNumber} value={i}>
+              第 {s.sectionNumber} 节 · {questionTypeLabel(s.qtype)}
             </option>
           ))}
         </select>
