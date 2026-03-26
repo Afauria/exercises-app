@@ -23,9 +23,12 @@ test.describe('题库应用功能验证', () => {
     await expect(page.getByText('随机一节')).toBeVisible();
   });
 
-  test('顶栏：眼睛（显示答案）与垃圾箱（数据菜单）', async ({ page }) => {
+  test('顶栏：眼睛、自动下一题与垃圾箱', async ({ page }) => {
     await expect(
       page.getByRole('button', { name: /显示全部题目答案|隐藏全部题目答案/ })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /答对自动下一题/ })
     ).toBeVisible();
     await expect(page.getByRole('button', { name: /清空或导入题库/ })).toBeVisible();
   });

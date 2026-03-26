@@ -3,7 +3,9 @@ import { useBank } from '../context/BankContext';
 import {
   clearAllUserData,
   clearIncludingCustomBank,
+  getPracticeAutoNextOnCorrect,
   getRevealAll,
+  setPracticeAutoNextOnCorrect,
   setRevealAll,
 } from '../storage/appStorage';
 
@@ -11,17 +13,30 @@ export function HeaderActions() {
   const { reload, importFromTxt } = useBank();
   const [menuOpen, setMenuOpen] = useState(false);
   const [reveal, setRevealState] = useState(getRevealAll);
+  const [autoNext, setAutoNextState] = useState(getPracticeAutoNextOnCorrect);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setRevealState(getRevealAll());
   }, [menuOpen]);
 
+  useEffect(() => {
+    const sync = () => setAutoNextState(getPracticeAutoNextOnCorrect());
+    window.addEventListener('app-practice-auto-changed', sync);
+    return () => window.removeEventListener('app-practice-auto-changed', sync);
+  }, []);
+
   const toggleReveal = () => {
     const next = !getRevealAll();
     setRevealAll(next);
     setRevealState(next);
     window.dispatchEvent(new CustomEvent('app-reveal-changed'));
+  };
+
+  const toggleAutoNext = () => {
+    const next = !getPracticeAutoNextOnCorrect();
+    setPracticeAutoNextOnCorrect(next);
+    setAutoNextState(next);
   };
 
   const onClearAll = () => {
@@ -64,6 +79,16 @@ export function HeaderActions() {
         onClick={toggleReveal}
       >
         {reveal ? '👁' : '👁‍🗨'}
+      </button>
+      <button
+        type="button"
+        className={`icon-btn${autoNext ? ' icon-btn-active' : ''}`}
+        aria-label={autoNext ? '答对自动下一题（已开启）' : '答对自动下一题（已关闭）'}
+        aria-pressed={autoNext}
+        onClick={toggleAutoNext}
+        title={autoNext ? '答对自动下一题（已开）' : '答对自动下一题（已关）'}
+      >
+        自动
       </button>
       <button
         type="button"

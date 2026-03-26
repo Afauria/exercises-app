@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   practiceRecords: `${PREFIX}practice_records`,
   examSessions: `${PREFIX}exam_sessions`,
   revealAll: `${PREFIX}reveal_all`,
+  practiceAutoNextOnCorrect: `${PREFIX}practice_auto_next`,
   customBankJson: `${PREFIX}custom_bank_json`,
 } as const;
 
@@ -52,6 +53,15 @@ export function getPracticeRecords(): PracticeRecord[] {
   return readJson<PracticeRecord[]>(STORAGE_KEYS.practiceRecords, []);
 }
 
+/** 至少有一条练习记录（含跳过）的题目 id，用于「已完成」展示 */
+export function getCompletedQuestionIds(): Set<number> {
+  const set = new Set<number>();
+  for (const r of getPracticeRecords()) {
+    set.add(r.questionId);
+  }
+  return set;
+}
+
 export function appendPracticeRecord(r: PracticeRecord) {
   const all = getPracticeRecords();
   all.push(r);
@@ -76,6 +86,16 @@ export function getRevealAll(): boolean {
 
 export function setRevealAll(v: boolean) {
   writeJson(STORAGE_KEYS.revealAll, v);
+}
+
+/** 练习模式：选对后是否自动进入下一题 */
+export function getPracticeAutoNextOnCorrect(): boolean {
+  return readJson<boolean>(STORAGE_KEYS.practiceAutoNextOnCorrect, false);
+}
+
+export function setPracticeAutoNextOnCorrect(v: boolean) {
+  writeJson(STORAGE_KEYS.practiceAutoNextOnCorrect, v);
+  window.dispatchEvent(new CustomEvent('app-practice-auto-changed'));
 }
 
 export function getCustomBankJson(): string | null {

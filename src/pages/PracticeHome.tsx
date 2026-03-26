@@ -1,8 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBank, useQuestions } from '../context/BankContext';
-import { getSectionCount, questionsInSection } from '../lib/sectionConstants';
+import {
+  getSectionCount,
+  isSectionFullyCompleted,
+  questionsInSection,
+} from '../lib/sectionConstants';
 import type { Question } from '../types/models';
+import { getCompletedQuestionIds } from '../storage/appStorage';
 
 function filterSearch(all: Question[], q: string): Question[] {
   const s = q.trim().toLowerCase();
@@ -19,9 +24,21 @@ export function PracticeHome() {
   const all = useQuestions();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
+  const [recTick, setRecTick] = useState(0);
+
+  useEffect(() => {
+    const fn = () => setRecTick((t) => t + 1);
+    window.addEventListener('app-data-updated', fn);
+    window.addEventListener('app-storage-cleared', fn);
+    return () => {
+      window.removeEventListener('app-data-updated', fn);
+      window.removeEventListener('app-storage-cleared', fn);
+    };
+  }, []);
 
   const sections = getSectionCount(all);
   const matches = useMemo(() => filterSearch(all, query), [all, query]);
+  const completedIds = useMemo(() => getCompletedQuestionIds(), [recTick]);
 
   if (state.status === 'loading') {
     return <p className="muted">加载题库…</p>;
@@ -65,6 +82,9 @@ export function PracticeHome() {
                     }
                   >
                     第 {q.ordinal} 题
+                    {completedIds.has(q.id) && (
+                      <span className="q-done-mark">（已完成）</span>
+                    )}
                   </button>
                 </li>
               ))}
@@ -75,20 +95,26 @@ export function PracticeHome() {
         <>
           <h2 className="section-title">选择一节</h2>
           <div className="section-grid">
-            {Array.from({ length: sections }, (_, i) => (
-              <button
-                key={i}
-                type="button"
-                className="section-tile"
-                onClick={() =>
-                  navigate('/practice/quiz', {
-                    state: { questions: questionsInSection(all, i) },
-                  })
-                }
-              >
-                第 {i + 1} 节
-              </button>
-            ))}
+            {Array.from({ length: sections }, (_, i) => {
+              const secDone = isSectionFullyCompleted(all, i, completedIds);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  className={`section-tile${secDone ? ' section-tile--complete' : ''}`}
+                  onClick={() =>
+                    navigate('/practice/quiz', {
+                      state: { questions: questionsInSection(all, i) },
+                    })
+                  }
+                >
+                  第 {i + 1} 节
+                  {secDone && (
+                    <span className="section-done-mark">（已完成）</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
           <button
             type="button"

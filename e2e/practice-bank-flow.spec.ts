@@ -38,7 +38,7 @@ async function waitForBankReady(page: Page) {
 
 async function waitForQuizLoaded(page: Page) {
   await expect(page.getByText('载入本题组')).toBeHidden({ timeout: 120_000 });
-  await expect(page.getByText(/\d+ \/ \d+/).first()).toBeVisible();
+  await expect(page.getByText(/\d+\/\d+/).first()).toBeVisible();
 }
 
 async function pickAnyAnswer(page: Page) {
@@ -81,10 +81,10 @@ test.describe('题库加载与练习做题', () => {
     await page.getByText('第 1 节').first().click();
     await waitForQuizLoaded(page);
 
-    await expect(page.getByText('1 / 50')).toBeVisible();
+    await expect(page.getByText(/1\/50/)).toBeVisible();
     await pickAnyAnswer(page);
-    await page.getByRole('button', { name: '下一题' }).click();
-    await expect(page.getByText('2 / 50')).toBeVisible();
+    await page.getByRole('button', { name: '下一题', exact: true }).click();
+    await expect(page.getByText(/2\/50/)).toBeVisible();
   });
 
   test('返回后切换第 2 节：题号与进度重置', async ({ page }) => {
@@ -94,7 +94,7 @@ test.describe('题库加载与练习做题', () => {
 
     await page.getByText('第 1 节').first().click();
     await waitForQuizLoaded(page);
-    await expect(page.getByText('1 / 50')).toBeVisible();
+    await expect(page.getByText(/1\/50/)).toBeVisible();
     await expect(page.getByText(/^1\./).first()).toBeVisible();
 
     await page.getByRole('button', { name: '返回练习列表' }).click();
@@ -102,7 +102,7 @@ test.describe('题库加载与练习做题', () => {
 
     await sec2.first().click();
     await waitForQuizLoaded(page);
-    await expect(page.getByText('1 / 50')).toBeVisible();
+    await expect(page.getByText(/1\/50/)).toBeVisible();
     await expect(page.getByText(/^51\./).first()).toBeVisible();
   });
 });

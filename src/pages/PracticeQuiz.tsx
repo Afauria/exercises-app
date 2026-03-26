@@ -1,30 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { QuestionCard } from '../components/QuestionCard';
+import { useSwipePrevNext } from '../hooks/useSwipePrevNext';
 import type { Question } from '../types/models';
 import {
+  isAnswerCorrect,
+  normalizeMultiAnswer,
+  normalizeQuestionType,
+  questionTypeLabel,
+} from '../lib/questionAnswer';
+import {
   appendPracticeRecord,
+  getCompletedQuestionIds,
   getFavoriteIds,
+  getPracticeAutoNextOnCorrect,
   getWrongIds,
   setFavoriteIds,
   setWrongIds,
 } from '../storage/appStorage';
-
-function normalizeChoice(ans: string): string {
-  const t = ans.trim().toUpperCase();
-  if (/^[A-D]$/.test(t)) return t;
-  return ans.trim();
-}
-
-function isCorrect(q: Question, choice: string): boolean {
-  if (q.qtype === 'boolean') {
-    return (
-      (q.answer.includes('正确') && choice === '正确') ||
-      (q.answer.includes('错误') && choice === '错误')
-    );
-  }
-  return normalizeChoice(choice) === normalizeChoice(q.answer);
-}
 
 export function PracticeQuiz() {
   const navigate = useNavigate();
@@ -37,9 +30,27 @@ export function PracticeQuiz() {
   const [answers, setAnswers] = useState<(string | null)[]>(() =>
     questions.map(() => null)
   );
-  /** 本题在本轮中是否已写入练习记录（离开本题时写入） */
+  const [revealed, setRevealed] = useState<boolean[]>(() => questions.map(() => false));
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
   const writtenForIndexRef = useRef<Set<number>>(new Set());
+  const [autoNext, setAutoNext] = useState(getPracticeAutoNextOnCorrect);
   const [favTick, setFavTick] = useState(0);
+  const [recTick, setRecTick] = useState(0);
+  const swipeAreaRef = useRef<HTMLDivElement>(null);
+  const swipeHandlersRef = useRef({ prev: () => {}, next: () => {} });
+
+  useEffect(() => {
+    const fn = () => setRecTick((t) => t + 1);
+    window.addEventListener('app-data-updated', fn);
+    return () => window.removeEventListener('app-data-updated', fn);
+  }, []);
+
+  useEffect(() => {
+    const fn = () => setAutoNext(getPracticeAutoNextOnCorrect());
+    window.addEventListener('app-practice-auto-changed', fn);
+    return () => window.removeEventListener('app-practice-auto-changed', fn);
+  }, []);
 
   useEffect(() => {
     if (questions.length === 0) {
@@ -53,12 +64,10 @@ export function PracticeQuiz() {
   const q = questions[idx] ?? null;
   const total = questions.length;
 
-  const progress = useMemo(
-    () => (q ? `${idx + 1} / ${total}` : ''),
-    [idx, total, q]
-  );
-
   const choice = answers[idx] ?? null;
+
+  const completedIds = useMemo(() => getCompletedQuestionIds(), [recTick]);
+  const progressDone = q ? completedIds.has(q.id) : false;
 
   const favIds = useMemo(() => new Set(getFavoriteIds()), [favTick, q?.id]);
   const toggleFav = () => {
@@ -71,8 +80,37 @@ export function PracticeQuiz() {
     setFavTick((t) => t + 1);
   };
 
+  const markRevealed = (i: number) => {
+    setRevealed((r) => {
+      if (r[i]) return r;
+      const n = [...r];
+      n[i] = true;
+      return n;
+    });
+  };
+
   const onChoose = (label: string) => {
     if (!q) return;
+    const qt = normalizeQuestionType(q);
+    if (qt === 'multi') {
+      setAnswers((prev) => {
+        const cur = prev[idx] ?? '';
+        const set = new Set(
+          cur
+            .split(/[,，]+/)
+            .map((x) => x.trim().toUpperCase())
+            .filter((x) => /^[A-D]$/.test(x))
+        );
+        const L = label.trim().toUpperCase();
+        if (set.has(L)) set.delete(L);
+        else set.add(L);
+        const joined = [...set].sort().join(',');
+        const next = [...prev];
+        next[idx] = joined.length ? joined : null;
+        return next;
+      });
+      return;
+    }
     setAnswers((prev) => {
       if (prev[idx] !== null) return prev;
       const next = [...prev];
@@ -81,14 +119,15 @@ export function PracticeQuiz() {
     });
   };
 
-  /** 离开下标 i 的题目时写入统计与错题（跳过记为错误并进入错题本） */
   const flushAtIndex = (i: number) => {
     if (writtenForIndexRef.current.has(i)) return;
     const cur = questions[i];
     if (!cur) return;
     writtenForIndexRef.current.add(i);
-    const ans = answers[i];
-    if (ans == null) {
+    const ans = answersRef.current[i];
+    const qt = normalizeQuestionType(cur);
+    const emptyMulti = qt === 'multi' && (ans == null || normalizeMultiAnswer(ans) === '');
+    if (ans == null || emptyMulti) {
       appendPracticeRecord({
         questionId: cur.id,
         correct: false,
@@ -100,7 +139,7 @@ export function PracticeQuiz() {
       setWrongIds([...w]);
       return;
     }
-    const ok = isCorrect(cur, ans);
+    const ok = isAnswerCorrect(cur, ans);
     appendPracticeRecord({
       questionId: cur.id,
       correct: ok,
@@ -116,8 +155,8 @@ export function PracticeQuiz() {
 
   const prev = () => {
     if (idx <= 0) return;
+    markRevealed(idx);
     const target = idx - 1;
-    // 回到尚未选题的题目时，允许再次离开时再记一条（例如先跳过再返回补答）
     if (answers[target] == null) {
       writtenForIndexRef.current.delete(target);
     }
@@ -126,6 +165,7 @@ export function PracticeQuiz() {
 
   const next = () => {
     flushAtIndex(idx);
+    markRevealed(idx);
     if (idx + 1 >= total) {
       navigate('/practice');
       return;
@@ -133,41 +173,88 @@ export function PracticeQuiz() {
     setIdx((i) => i + 1);
   };
 
+  useEffect(() => {
+    if (!q || choice == null || !autoNext) return;
+    if (normalizeQuestionType(q) === 'multi') return;
+    if (!isAnswerCorrect(q, choice)) return;
+    const thisIdx = idx;
+    const tid = window.setTimeout(() => {
+      if (writtenForIndexRef.current.has(thisIdx)) return;
+      flushAtIndex(thisIdx);
+      markRevealed(thisIdx);
+      if (thisIdx + 1 >= total) {
+        navigate('/practice');
+        return;
+      }
+      setIdx(thisIdx + 1);
+    }, 380);
+    return () => clearTimeout(tid);
+  }, [q?.id, choice, autoNext, idx, total, navigate]);
+
+  swipeHandlersRef.current = { prev, next };
+  useSwipePrevNext(swipeAreaRef, swipeHandlersRef, loading || !q ? 0 : 1);
+
   if (loading || !q) {
     return <p className="loading-banner">载入本题组</p>;
   }
 
+  const qt = normalizeQuestionType(q);
+  const answerRevealed =
+    revealed[idx] || (choice != null && qt !== 'multi');
+
   return (
     <div className="quiz-page">
-      <p className="progress-text">{progress}</p>
-      <QuestionCard question={q} userChoice={choice} onChoose={onChoose} />
-      <div className="fav-row">
-        <button type="button" className="small-btn" onClick={toggleFav}>
-          {favIds.has(q.id) ? '已收藏' : '收藏本题'}
-        </button>
+      <p className="progress-text">
+        {idx + 1}/{total} （{questionTypeLabel(qt)}）
+        {progressDone && (
+          <span className="q-done-mark" aria-label="本题已完成">
+            {' '}
+            （已完成）
+          </span>
+        )}
+      </p>
+      <div className="quiz-swipe-area" ref={swipeAreaRef}>
+        <QuestionCard
+          question={q}
+          userChoice={choice}
+          onChoose={onChoose}
+          answerRevealed={answerRevealed}
+        />
       </div>
-      <div className="quiz-actions">
-        <button
-          type="button"
-          className="secondary-btn"
-          onClick={() => {
-            flushAtIndex(idx);
-            navigate('/practice');
-          }}
-        >
-          返回练习列表
-        </button>
-        <button
-          type="button"
-          className="secondary-btn"
-          disabled={idx === 0}
-          onClick={prev}
-        >
-          上一题
-        </button>
-        <button type="button" className="primary-btn" onClick={next}>
-          {idx + 1 >= total ? '完成' : '下一题'}
-        </button>
+      <div className="quiz-toolbar">
+        <div className="quiz-toolbar-left">
+          <button
+            type="button"
+            className="secondary-btn quiz-toolbar-btn"
+            aria-label="返回练习列表"
+            onClick={() => {
+              flushAtIndex(idx);
+              markRevealed(idx);
+              navigate('/practice');
+            }}
+          >
+            返回
+          </button>
+          <button type="button" className="secondary-btn quiz-toolbar-btn" onClick={toggleFav}>
+            {favIds.has(q.id) ? '已收藏' : '收藏本题'}
+          </button>
+        </div>
+        <div className="quiz-toolbar-actions" aria-label="题目切换">
+          <div className="quiz-toolbar-btns">
+            <button
+              type="button"
+              className="secondary-btn quiz-toolbar-btn"
+              disabled={idx === 0}
+              onClick={prev}
+            >
+              上一题
+            </button>
+            <button type="button" className="primary-btn quiz-toolbar-btn" onClick={next}>
+              {idx + 1 >= total ? '完成' : '下一题'}
+            </button>
+          </div>
+          <p className="swipe-hint muted quiz-swipe-hint">在题目框内左右滑切换题目</p>
+        </div>
       </div>
     </div>
   );
