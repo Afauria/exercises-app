@@ -33,11 +33,15 @@ const BankCtx = createContext<{
 
 function builtinBankFetchUrl(): string {
   const base = import.meta.env.BASE_URL;
-  return base.endsWith('/') ? `${base}bank.json` : `${base}/bank.json`;
+  const path = base.endsWith('/') ? `${base}bank.json` : `${base}/bank.json`;
+  const stamp = import.meta.env.VITE_BANK_STAMP;
+  if (!stamp) return path;
+  const sep = path.includes('?') ? '&' : '?';
+  return `${path}${sep}v=${encodeURIComponent(stamp)}`;
 }
 
 async function fetchBuiltin(): Promise<BankDocument> {
-  const res = await fetch(builtinBankFetchUrl());
+  const res = await fetch(builtinBankFetchUrl(), { cache: 'no-store' });
   if (!res.ok) throw new Error(`无法加载题库：HTTP ${res.status}`);
   return res.json() as Promise<BankDocument>;
 }

@@ -9,8 +9,18 @@ const txtPath = path.join(root, 'assets', 'bundled-question-bank.txt');
 const outDir = path.join(root, 'public');
 const outPath = path.join(outDir, 'bank.json');
 
+if (!fs.existsSync(txtPath)) {
+  console.error(`缺少题库源文件：${txtPath}`);
+  process.exit(1);
+}
+
 const raw = fs.readFileSync(txtPath, 'utf8');
 const { questions, errors } = parseQuestionBank(raw);
+
+console.log(
+  `[build-bank-json] 从 TXT 生成 public/bank.json（CI/GitHub Actions 同样如此）。` +
+    `若线上题库未变，请确认已提交并推送：${txtPath}`
+);
 
 const out = questions.map((q, i) => ({
   id: i + 1,

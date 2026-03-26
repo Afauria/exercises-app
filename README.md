@@ -90,7 +90,10 @@ npm run dev
   `VITE_BASE=/你的前缀/`  
   （根路径站点使用 `VITE_BASE=/`）。
 
-题库源文件：`assets/bundled-question-bank.txt` → 构建脚本生成 **`public/bank.json`**。
+题库源文件：**`assets/bundled-question-bank.txt`** → `prebuild` 会执行 `scripts/build-bank-json.ts`，**每次构建都会用 TXT 覆盖生成** **`public/bank.json`**。
+
+- 更新题库后请 **`git add` 并推送 `assets/bundled-question-bank.txt`**（以及随之生成的 `public/bank.json` 若你一并纳入版本控制）。若只改本地 `bank.json` 而未改 TXT，或未把 TXT 推送到 GitHub，则 **Pages 构建仍会按仓库里的旧 TXT 出题**，表现常为「样式/代码已更新，题库还是旧的」。
+- 构建产物中的内置 `bank.json` 请求会带版本查询参数（基于提交 SHA 或本地时间戳），减轻 **CDN/浏览器缓存** 导致仍加载旧 `bank.json` 的情况。
 
 ---
 

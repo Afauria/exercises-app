@@ -24,9 +24,16 @@ function resolveBase(): string {
 
 const base = resolveBase();
 
+/** 打进前端用于 fetch(bank.json) 的查询参数，避免 GitHub Pages / 浏览器长期缓存旧题库 */
+const bankStamp =
+  process.env.GITHUB_SHA?.slice(0, 12) || `local-${Date.now()}`;
+
 export default defineConfig({
   base,
   plugins: [react()],
+  define: {
+    'import.meta.env.VITE_BANK_STAMP': JSON.stringify(bankStamp),
+  },
   server: { port: 5173 },
   preview: { port: 5174, strictPort: true, host: '127.0.0.1' },
 });
