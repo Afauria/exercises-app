@@ -182,18 +182,17 @@ export function ExamQuiz() {
     qt === 'multi' && !multiSubmitted[idx] && !revealAllGlobal;
 
   return (
-    <div className="quiz-page quiz-page-with-side-nav">
-      <div className="quiz-main-col" ref={swipeAreaRef}>
-        <div className="exam-timer">
-          剩余 {mm}:{ss}
-          <button type="button" className="linkish" onClick={submitAll}>
-            交卷
-          </button>
-        </div>
-        <p className="progress-text">
-          {idx + 1} / {total} （{questionTypeLabel(qt)}）
-        </p>
-        <p className="swipe-hint muted">左右滑动可切换题目</p>
+    <div className="quiz-page">
+      <div className="exam-timer">
+        剩余 {mm}:{ss}
+        <button type="button" className="linkish" onClick={submitAll}>
+          交卷
+        </button>
+      </div>
+      <p className="progress-text">
+        {idx + 1} / {total} （{questionTypeLabel(qt)}）
+      </p>
+      <div className="quiz-swipe-area" ref={swipeAreaRef}>
         <QuestionCard
           question={q}
           userChoice={choice}
@@ -211,20 +210,30 @@ export function ExamQuiz() {
           }
         />
       </div>
-      <aside className="quiz-nav-rail" aria-label="题目切换">
-        <button type="button" className="secondary-btn" disabled={idx === 0} onClick={prev}>
-          上一题
-        </button>
-        <button
-          type="button"
-          className="primary-btn nav-next-btn"
-          disabled={multiNextBlocked}
-          title={multiNextBlocked ? '请先点击「提交答案」' : undefined}
-          onClick={next}
-        >
-          {idx + 1 >= total ? '完成' : '下一题'}
-        </button>
-      </aside>
+      <div className="quiz-toolbar">
+        <div className="quiz-toolbar-actions" aria-label="题目切换">
+          <div className="quiz-toolbar-btns">
+            <button
+              type="button"
+              className="secondary-btn quiz-toolbar-btn"
+              disabled={idx === 0}
+              onClick={prev}
+            >
+              上一题
+            </button>
+            <button
+              type="button"
+              className="primary-btn quiz-toolbar-btn"
+              disabled={multiNextBlocked}
+              title={multiNextBlocked ? '请先点击「提交答案」' : undefined}
+              onClick={next}
+            >
+              {idx + 1 >= total ? '完成' : '下一题'}
+            </button>
+          </div>
+          <p className="swipe-hint muted quiz-swipe-hint">左右滑动可切换题目</p>
+        </div>
+      </div>
     </div>
   );
 }

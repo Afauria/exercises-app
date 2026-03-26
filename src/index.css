@@ -242,42 +242,6 @@ body {
   border: none;
 }
 
-.quiz-page-with-side-nav {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin: 0 -2px;
-}
-
-.quiz-main-col {
-  flex: 1;
-  min-width: 0;
-}
-
-.quiz-nav-rail {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-top: 4px;
-  width: 92px;
-  position: sticky;
-  top: 56px;
-  align-self: flex-start;
-}
-
-.quiz-nav-rail .primary-btn,
-.quiz-nav-rail .secondary-btn {
-  width: 100%;
-  padding-left: 10px;
-  padding-right: 10px;
-  font-size: 0.9rem;
-}
-
-.nav-next-btn {
-  min-height: 48px;
-}
-
 .quiz-back-link {
   display: block;
   margin: 0 0 8px;

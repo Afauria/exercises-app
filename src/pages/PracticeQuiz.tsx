@@ -264,18 +264,6 @@ export function PracticeQuiz() {
       </div>
       <div className="quiz-toolbar">
         <div className="quiz-toolbar-left">
-          <button
-            type="button"
-            className="secondary-btn quiz-toolbar-btn"
-            aria-label="返回练习列表"
-            onClick={() => {
-              flushAtIndex(idx);
-              markRevealed(idx);
-              navigate('/practice');
-            }}
-          >
-            返回
-          </button>
           <button type="button" className="secondary-btn quiz-toolbar-btn" onClick={toggleFav}>
             {favIds.has(q.id) ? '已收藏' : '收藏本题'}
           </button>
