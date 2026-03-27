@@ -50,8 +50,11 @@ export function WrongBook() {
     bump();
   };
 
-  const openOne = (q: Question) => {
-    navigate('/practice/quiz', { state: { questions: [q] } });
+  const openInQuiz = (list: Question[], q: Question) => {
+    const i = list.findIndex((x) => x.id === q.id);
+    navigate('/practice/quiz', {
+      state: { questions: list, initialIndex: i >= 0 ? i : 0 },
+    });
   };
 
   return (
@@ -63,7 +66,7 @@ export function WrongBook() {
         <ul className="card-list">
           {wrongQs.map((q) => (
             <li key={q.id} className="wrong-row">
-              <button type="button" className="link-btn" onClick={() => openOne(q)}>
+              <button type="button" className="link-btn" onClick={() => openInQuiz(wrongQs, q)}>
                 第 {q.ordinal} 题 · {q.stem.slice(0, 36)}
                 {q.stem.length > 36 ? '…' : ''}
               </button>
@@ -82,7 +85,7 @@ export function WrongBook() {
         <ul className="card-list">
           {favQs.map((q) => (
             <li key={q.id} className="wrong-row">
-              <button type="button" className="link-btn" onClick={() => openOne(q)}>
+              <button type="button" className="link-btn" onClick={() => openInQuiz(favQs, q)}>
                 第 {q.ordinal} 题
               </button>
               <button type="button" className="small-btn" onClick={() => toggleFav(q.id)}>

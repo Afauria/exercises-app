@@ -23,13 +23,18 @@ import {
 export function PracticeQuiz() {
   const navigate = useNavigate();
   const { state } = useLocation() as {
-    state?: { questions?: Question[] };
+    state?: { questions?: Question[]; initialIndex?: number };
   };
   const questions = state?.questions ?? [];
+  const initialIndexRaw = state?.initialIndex ?? 0;
   const bankKey = useMemo(() => questions.map((x) => x.id).join(','), [questions]);
 
   const [loading, setLoading] = useState(true);
-  const [idx, setIdx] = useState(0);
+  const [idx, setIdx] = useState(() =>
+    questions.length === 0
+      ? 0
+      : Math.min(Math.max(0, initialIndexRaw), questions.length - 1)
+  );
   const [answers, setAnswers] = useState<(string | null)[]>(() =>
     questions.map(() => null)
   );
@@ -54,12 +59,16 @@ export function PracticeQuiz() {
   }, []);
 
   useEffect(() => {
-    setIdx(0);
+    const start =
+      questions.length === 0
+        ? 0
+        : Math.min(Math.max(0, initialIndexRaw), questions.length - 1);
+    setIdx(start);
     setAnswers(questions.map(() => null));
     setRevealed(questions.map(() => false));
     setMultiSubmitted(questions.map(() => false));
     writtenForIndexRef.current = new Set();
-  }, [bankKey]);
+  }, [bankKey, initialIndexRaw, questions]);
 
   useEffect(() => {
     const fn = () => setRecTick((t) => t + 1);
