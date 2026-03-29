@@ -4,6 +4,7 @@ const PREFIX = 'exam_web:';
 
 const STORAGE_KEYS = {
   wrongIds: `${PREFIX}wrong_ids`,
+  wrongMasterProgress: `${PREFIX}wrong_master_progress`,
   favoriteIds: `${PREFIX}favorite_ids`,
   practiceRecords: `${PREFIX}practice_records`,
   examSessions: `${PREFIX}exam_sessions`,
@@ -38,6 +39,36 @@ export function getWrongIds(): number[] {
 export function setWrongIds(ids: number[]) {
   writeJson(STORAGE_KEYS.wrongIds, ids);
   notifyAppDataUpdated();
+}
+
+/** 错题本内题目连续答对次数（达 2 次自动移出错题本）；答错或跳过会清零 */
+export function getWrongMasterProgress(): Record<string, number> {
+  return readJson<Record<string, number>>(STORAGE_KEYS.wrongMasterProgress, {});
+}
+
+export function clearWrongMasterProgress(questionId: number) {
+  const m = { ...getWrongMasterProgress() };
+  const k = String(questionId);
+  if (!(k in m)) return;
+  delete m[k];
+  writeJson(STORAGE_KEYS.wrongMasterProgress, m);
+  notifyAppDataUpdated();
+}
+
+/** 练习模式下本题已在错题本中且本次判定为答对时调用 */
+export function applyWrongBookCorrectStreak(questionId: number) {
+  const k = String(questionId);
+  const m = { ...getWrongMasterProgress() };
+  const n = (m[k] ?? 0) + 1;
+  if (n >= 2) {
+    delete m[k];
+    writeJson(STORAGE_KEYS.wrongMasterProgress, m);
+    setWrongIds(getWrongIds().filter((id) => id !== questionId));
+  } else {
+    m[k] = n;
+    writeJson(STORAGE_KEYS.wrongMasterProgress, m);
+    notifyAppDataUpdated();
+  }
 }
 
 export function getFavoriteIds(): number[] {
@@ -110,6 +141,7 @@ export function setCustomBankJson(json: string | null) {
 /** 清空练习记录、错题、收藏、考试记录、显隐答案；保留自定义题库 JSON（若用户曾导入）。 */
 export function clearAllUserData() {
   localStorage.removeItem(STORAGE_KEYS.wrongIds);
+  localStorage.removeItem(STORAGE_KEYS.wrongMasterProgress);
   localStorage.removeItem(STORAGE_KEYS.favoriteIds);
   localStorage.removeItem(STORAGE_KEYS.practiceRecords);
   localStorage.removeItem(STORAGE_KEYS.examSessions);

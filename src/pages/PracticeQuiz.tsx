@@ -11,6 +11,8 @@ import {
 } from '../lib/questionAnswer';
 import {
   appendPracticeRecord,
+  applyWrongBookCorrectStreak,
+  clearWrongMasterProgress,
   getCompletedQuestionIds,
   getFavoriteIds,
   getPracticeAutoNextOnCorrect,
@@ -19,6 +21,14 @@ import {
   setFavoriteIds,
   setWrongIds,
 } from '../storage/appStorage';
+
+/** 与 flushAtIndex 一致：未选/多选未选有效项视为跳过 */
+function isPracticeSkippedUnanswered(question: Question, answer: string | null): boolean {
+  const qt = normalizeQuestionType(question);
+  const emptyMulti =
+    qt === 'multi' && (answer == null || normalizeMultiAnswer(answer) === '');
+  return answer == null || emptyMulti;
+}
 
 export function PracticeQuiz() {
   const navigate = useNavigate();
@@ -154,32 +164,36 @@ export function PracticeQuiz() {
     const cur = questions[i];
     if (!cur) return;
     writtenForIndexRef.current.add(i);
+    const wrongIdsBefore = getWrongIds();
     const ans = answersRef.current[i];
-    const qt = normalizeQuestionType(cur);
-    const emptyMulti = qt === 'multi' && (ans == null || normalizeMultiAnswer(ans) === '');
-    if (ans == null || emptyMulti) {
+    if (isPracticeSkippedUnanswered(cur, ans)) {
       appendPracticeRecord({
         questionId: cur.id,
         correct: false,
         userChoice: '(跳过)',
         at: Date.now(),
       });
+      clearWrongMasterProgress(cur.id);
       const w = new Set(getWrongIds());
       w.add(cur.id);
       setWrongIds([...w]);
       return;
     }
-    const ok = isAnswerCorrect(cur, ans);
+    const answered = ans as string;
+    const ok = isAnswerCorrect(cur, answered);
     appendPracticeRecord({
       questionId: cur.id,
       correct: ok,
-      userChoice: ans,
+      userChoice: answered,
       at: Date.now(),
     });
     if (!ok) {
+      clearWrongMasterProgress(cur.id);
       const w = new Set(getWrongIds());
       w.add(cur.id);
       setWrongIds([...w]);
+    } else if (wrongIdsBefore.includes(cur.id)) {
+      applyWrongBookCorrectStreak(cur.id);
     }
   };
 
@@ -187,10 +201,33 @@ export function PracticeQuiz() {
 
   const prev = () => {
     if (idx <= 0) return;
-    markRevealed(idx);
+    const curQ = questions[idx];
+    if (curQ) {
+      const qt = normalizeQuestionType(curQ);
+      const curChoice = answersRef.current[idx] ?? null;
+      const leaveRevealed =
+        getRevealAll() ||
+        (qt === 'multi'
+          ? multiSubmitted[idx] &&
+            !isPracticeSkippedUnanswered(curQ, curChoice)
+          : curChoice !== null);
+      if (leaveRevealed) markRevealed(idx);
+    }
     const target = idx - 1;
     if (answers[target] == null) {
       writtenForIndexRef.current.delete(target);
+      setRevealed((r) => {
+        if (!r[target]) return r;
+        const n = [...r];
+        n[target] = false;
+        return n;
+      });
+      setMultiSubmitted((m) => {
+        if (!m[target]) return m;
+        const n = [...m];
+        n[target] = false;
+        return n;
+      });
     }
     setIdx(target);
   };
@@ -199,8 +236,19 @@ export function PracticeQuiz() {
     if (q && normalizeQuestionType(q) === 'multi' && !multiSubmitted[idx] && !revealAllGlobal) {
       return;
     }
+    const skipped = q
+      ? isPracticeSkippedUnanswered(q, answersRef.current[idx] ?? null)
+      : true;
     flushAtIndex(idx);
-    markRevealed(idx);
+    if (!skipped) markRevealed(idx);
+    else {
+      setMultiSubmitted((m) => {
+        if (!m[idx]) return m;
+        const n = [...m];
+        n[idx] = false;
+        return n;
+      });
+    }
     if (idx + 1 >= total) {
       navigate('/practice');
       return;
@@ -237,7 +285,9 @@ export function PracticeQuiz() {
   const answerRevealed =
     revealAllGlobal ||
     revealed[idx] ||
-    (qt === 'multi' ? multiSubmitted[idx] : choice !== null);
+    (qt === 'multi'
+      ? multiSubmitted[idx] && !isPracticeSkippedUnanswered(q, choice)
+      : choice !== null);
 
   const multiNextBlocked =
     qt === 'multi' && !multiSubmitted[idx] && !revealAllGlobal;

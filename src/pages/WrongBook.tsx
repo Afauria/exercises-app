@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuestions } from '../context/BankContext';
 import type { Question } from '../types/models';
 import {
+  clearWrongMasterProgress,
   getFavoriteIds,
   getWrongIds,
   setFavoriteIds,
@@ -38,6 +39,7 @@ export function WrongBook() {
   const favQs = favIds.map((id) => byId.get(id)).filter(Boolean) as Question[];
 
   const removeWrong = (id: number) => {
+    clearWrongMasterProgress(id);
     setWrongIds(wrongIds.filter((x) => x !== id));
     bump();
   };
