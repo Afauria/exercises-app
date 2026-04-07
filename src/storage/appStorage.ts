@@ -148,7 +148,7 @@ export function clearAllUserData() {
   localStorage.removeItem(STORAGE_KEYS.revealAll);
 }
 
-/** 连自定义题库一并移除，回到仅内置 bank.json。 */
+/** 连自定义题库一并移除，回到仅内置 bank-formal.json。 */
 export function clearIncludingCustomBank() {
   clearAllUserData();
   localStorage.removeItem(STORAGE_KEYS.customBankJson);

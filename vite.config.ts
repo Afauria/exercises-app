@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 /**
- * 静态资源与 fetch(bank.json) 的前缀，须与线上 URL 路径一致。
+ * 静态资源与 fetch(bank-formal.json) 的前缀，须与线上 URL 路径一致。
  *
  * 优先级：
  * 1. VITE_BASE（手动覆盖，须以 / 开头，建议带末尾 /，如 /my-repo/）
@@ -24,7 +24,7 @@ function resolveBase(): string {
 
 const base = resolveBase();
 
-/** 打进前端用于 fetch(bank.json) 的查询参数，避免 GitHub Pages / 浏览器长期缓存旧题库 */
+/** 打进前端用于 fetch(bank-formal.json) 的查询参数，避免 GitHub Pages / 浏览器长期缓存旧题库 */
 const bankStamp =
   process.env.GITHUB_SHA?.slice(0, 12) || `local-${Date.now()}`;
 

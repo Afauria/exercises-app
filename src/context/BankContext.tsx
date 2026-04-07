@@ -33,7 +33,9 @@ const BankCtx = createContext<{
 
 function builtinBankFetchUrl(): string {
   const base = import.meta.env.BASE_URL;
-  const path = base.endsWith('/') ? `${base}bank.json` : `${base}/bank.json`;
+  const path = base.endsWith('/')
+    ? `${base}bank-formal.json`
+    : `${base}/bank-formal.json`;
   const stamp = import.meta.env.VITE_BANK_STAMP;
   if (!stamp) return path;
   const sep = path.includes('?') ? '&' : '?';
